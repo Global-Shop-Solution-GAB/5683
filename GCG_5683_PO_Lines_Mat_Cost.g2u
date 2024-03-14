@@ -1,0 +1,64 @@
+Program.Sub.Preflight.Start
+Program.Sub.Preflight.End
+
+Program.Sub.Main.Start
+'Author: Bix
+'Date: 17 Sept 2019
+'CRYSTORAMA, INC.
+'GCG_5683_PO_Lines_Mat_Cost.g2u
+'When the part is changed, write the Part's Material cost to the Price Field
+V.Local.sError.Declare
+V.Local.sRevOption.Declare
+V.Local.sPart.Declare
+F.Intrinsic.Control.Try
+
+'Fires on hook 17186 and 17182 and 17183
+'PO Lines Post Part Chg Hook and Rev Chg Hook and Loc Chg Hook
+F.Intrinsic.Control.If(V.Passed.000008.Trim,!=,"")
+	'Check if the Rev is turned on in the Company Options
+	F.Global.General.ReadOption("070008",1,"?",V.Local.sRevOption)
+	F.Intrinsic.Control.If(V.Local.sRevOption,=,"Y")
+		F.Intrinsic.String.GSSPartString(V.Passed.000008,V.Passed.000009,V.Local.sPart)
+	F.Intrinsic.Control.Else
+		V.Local.sPart.Set(V.Passed.000008)
+	F.Intrinsic.Control.EndIf
+	F.Intrinsic.Control.CallSub(GetPartMatCost,"Part",V.Local.sPart,"Loc",V.Passed.000011)
+	F.Intrinsic.Control.If(V.Args.MatCost,>=,0)
+		V.Passed.000025.Set(V.Args.MatCost)
+		V.Passed.000058.Set(" ")
+		V.Passed.000058.Set("Inventory - Material")
+		V.Passed.000059.Set(" ")
+		V.Passed.000059.Set("Inventory - Material")
+	F.Intrinsic.Control.EndIf
+F.Intrinsic.Control.EndIf
+
+F.Intrinsic.Control.Catch
+	F.Intrinsic.String.Build("Project: {0}{1}{1}Subroutine: {2}{1}Error Occurred {3} with description {4}{1}{1}GAB Version: {5}",V.Caller.ScriptFile,V.Ambient.Newline,V.Ambient.CurrentSubroutine,V.Ambient.ErrorNumber,V.Ambient.ErrorDescription,V.Ambient.GABVersion,V.Local.sError)
+	F.Intrinsic.UI.Msgbox(V.Local.sError)
+	F.Intrinsic.Control.End
+F.Intrinsic.Control.EndTry
+Program.Sub.Main.End
+
+Program.Sub.GetPartMatCost.Start
+'V.Args.Part, V.Args.Loc
+V.Local.sError.Declare
+V.Local.sSQL.Declare
+V.Local.fMat.Declare
+F.Intrinsic.Control.Try
+
+F.Intrinsic.String.Build("select MATL from V_INVENTORY_COST where PART = '{0}' and LOCN = '{1}';",V.Args.Part,V.Args.Loc,V.Local.sSQL)
+F.ODBC.Connection!con.OpenCompanyConnection
+F.ODBC.Connection!con.ExecuteAndReturn(V.Local.sSQL,V.Local.fMat)
+F.ODBC.Connection!con.Close
+F.Intrinsic.Control.If(V.Ambient.ExecuteAndReturnEOF)
+	F.Intrinsic.Variable.AddRV("MatCost",-1.0)
+F.Intrinsic.Control.Else
+	F.Intrinsic.Variable.AddRV("MatCost",V.Local.fMat)
+F.Intrinsic.Control.EndIf
+
+F.Intrinsic.Control.Catch
+	F.Intrinsic.String.Build("Project: {0}{1}{1}Subroutine: {2}{1}Error Occurred {3} with description {4}{1}{1}GAB Version: {5}",V.Caller.ScriptFile,V.Ambient.Newline,V.Ambient.CurrentSubroutine,V.Ambient.ErrorNumber,V.Ambient.ErrorDescription,V.Ambient.GABVersion,V.Local.sError)
+	F.Intrinsic.UI.Msgbox(V.Local.sError)
+	F.Intrinsic.Control.End
+F.Intrinsic.Control.EndTry
+Program.Sub.GetPartMatCost.End
